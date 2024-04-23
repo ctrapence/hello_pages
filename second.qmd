@@ -16,15 +16,15 @@ pacman::p_load(reactable,tidyverse,plotly)
 # What makes HTML Reports great? 
 
 
-
-##Interactive tables
+:::{.panel-tabset}
+## Interactive tables
 
 ```{r}
 reactable(infert)
 ```
 
 
-##Interactive plots 
+## Interactive plots 
 
 
 ```{r}
@@ -34,4 +34,4 @@ education_plot <- ggplot(infert,aes(x=education,fill=education))+
 
 ggplotly(education_plot)
 ```
-::
+:::
