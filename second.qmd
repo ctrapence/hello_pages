@@ -1,0 +1,37 @@
+---
+author: "Clement Trapence"
+title: "HTML Introduction"
+subtitle: "The Power of HTML Documents"
+date: "2024-04-23"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+if(!require(pacman)) install.packages("pacman")
+pacman::p_load(reactable,tidyverse,plotly)
+```
+
+# What makes HTML Reports great? 
+
+
+
+##Interactive tables
+
+```{r}
+reactable(infert)
+```
+
+
+##Interactive plots 
+
+
+```{r}
+education_plot <- ggplot(infert,aes(x=education,fill=education))+
+  geom_bar()
+
+
+ggplotly(education_plot)
+```
+::
