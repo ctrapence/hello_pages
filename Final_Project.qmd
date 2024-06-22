@@ -1,0 +1,152 @@
+---
+title: "MALARIA MORTALITY IN SADC REGION"
+
+format:   dashboard
+theme: lux
+execute:
+  echo: false
+  warning: false
+  message: false
+
+---
+
+The following data presents a summary of reported malaria deaths in the SADC region spanning from 1990 to 2006. This dashboard provides a country-wise summary and trends over the specified period. The dataset is sourced from the gapminder library, focusing on tracking and visualizing changes in malaria-related mortality across Southern African Development Community (SADC) countries during these years..
+
+## Running Code
+
+
+
+```{r echo=FALSE,message=F,warning=FALSE}
+#Loading required libraries
+if(!require("pacman")) install.packages("pacman")
+pacman::p_load( here,tidyverse,sf, bslib,  bsicons, rnaturalearth,plotly, countrycode,htmltools, reactable,janitor)
+```
+
+
+
+```{r echo=FALSE,message=F,warning=FALSE}
+#Loading dataset
+SADC <- gapminder::gapminder %>%
+  filter(continent=="Africa" & country %in% c("Angola", "Botswana","Comoros", "Congo, Dem. Rep.", "Eswatini", "Lesotho", "Madagascar", "Malawi", "Mauritius", "Mozambique", "Namibia", "Seychelles", "South Africa", "Tanzania", "Zambia" , "Zimbabwe")) %>%
+mutate(iso3c = countrycode("country", origin = "country.name", destination = "iso3c")) 
+  
+malaria_df <- read_csv(here("Data/malaria_number_of_deaths_reported.csv")) %>% 
+mutate(across(-country, as.numeric)) %>% 
+pivot_longer(cols = 2:18,names_to = "period",values_to = "deaths") %>% 
+  filter(!is.na(deaths))
+
+SADC_malaria_df <- left_join(SADC,malaria_df) %>%
+  mutate(period=as.numeric(period))
+
+
+
+countries <- rnaturalearth::ne_countries()
+
+ SADC_malaria_map_df <-inner_join(countries,SADC_malaria_df,by=c("name"="country")) 
+
+```
+```{r echo=FALSE,message=F,warning=FALSE}
+SADC_malaria_df_final <-  SADC_malaria_df %>% 
+  filter(!is.na(deaths)) %>% 
+  group_by(period) %>% 
+  summarize(deaths=sum(deaths))
+
+
+
+ dealth <- SADC_malaria_df_final %>% 
+   mutate(total_deaths=sum(deaths)) %>% 
+  distinct(total_deaths)
+
+countries_count <- as.data.frame(SADC_malaria_map_df) %>% 
+  select(name) %>% 
+  distinct()%>% 
+   mutate(count=max(NROW(name))) %>% 
+  select(-name) %>% 
+ mutate(count=max(count)) %>% 
+  distinct()
+
+
+```
+# Home
+
+## Row 1 {height=30%} 
+
+```{r echo=FALSE,message=F,warning=FALSE}
+value_box(title="Number of Countries Reported",
+          value= countries_count,
+           theme = value_box_theme(bg="blue"),
+          showcase =bs_icon("book",
+                  width=4)
+          )
+
+```
+
+
+```{r echo=FALSE,message=F,warning=FALSE}
+
+value_box(title="Malaria Cumulative Deaths",
+          value= dealth,
+           theme = value_box_theme(bg="Purple"),
+          showcase =bs_icon("exclamation",
+                  width=4)
+          )
+
+```
+## Row 2 {height=70%}
+
+```{r echo=FALSE,message=F,warning=FALSE}
+  trend_ghp <- ggplot(data=SADC_malaria_df_final,
+      aes(x=period,y=deaths,group =1))+
+  geom_point(size=3)+
+  geom_line()+
+    labs(x = "Period", y = "Number of Deaths", title = "Malaria Deaths Over Time") +
+  theme_minimal()+
+  scale_x_continuous(breaks = seq(min(SADC_malaria_df_final$period), max(SADC_malaria_df_final$period), by = 4))+
+    theme(plot.title = element_text(hjust = 0.5))+
+    scale_y_continuous(labels = scales::comma_format())
+ggplotly(trend_ghp)
+
+```
+
+
+```{r echo=FALSE,message=F,warning=FALSE}
+  map_1 <- SADC_malaria_map_df%>% 
+    filter(!is.na(deaths) & period==2006) %>% 
+  ggplot()+
+  geom_sf(aes(fill=deaths))+
+   geom_sf_text(aes(label = geounit), size = 3, color = "black", check_overlap = TRUE) +
+  labs(title="Number of Death Reported as of the year 2006")+
+  theme(plot.title = element_text(hjust = 0.7))+
+   theme_void()
+
+
+```
+
+```{r echo=FALSE,message=F,warning=FALSE}
+ggplotly(map_1)
+```
+
+# Download
+```{r}
+library(htmltools)
+
+htmltools::browsable(
+  tagList(
+    reactable(
+      data = head(SADC_malaria_df),  # Displaying only the first few rows
+      searchable = TRUE,  # Optional: Enable searching
+      defaultPageSize = 20,  # Optional: Set default page size
+      pagination = TRUE,  # Optional: Enable pagination if needed
+      columns = list(
+        country = colDef(name = "country"),  # Column definitions
+        period = colDef(name = "period"),
+        deaths     = colDef(name = "deaths    ")
+      )
+    ),
+    tags$button(
+      "Download as CSV",
+      onclick = "Reactable.downloadDataCSV('SADC_malaria_df_final')"
+    )
+  )
+)
+```
